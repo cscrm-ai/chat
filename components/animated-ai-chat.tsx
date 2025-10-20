@@ -94,6 +94,7 @@ interface Message {
   id: string
   role: "user" | "assistant"
   content: string
+  images?: string[]
   timestamp: Date
 }
 
@@ -179,12 +180,16 @@ export function AnimatedAIChat() {
       const response = await fetch(
         `https://webhook3.cscrm.ai/webhook/45cd6c66-54eb-4923-ab30-601a928b52a9?agentId=${encodeURIComponent(agentId)}&message=${encodeURIComponent(messageToSend)}&conversationId=${encodeURIComponent(currentConversationId)}`,
       )
-      const data = await response.json()
+      const responseData = await response.json()
+      
+      // Processar se a resposta for um array ou objeto
+      const data = Array.isArray(responseData) ? responseData[0] : responseData
 
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
         content: data.output || "Desculpe, não consegui processar sua mensagem.",
+        images: data.images_url && data.images_url.length > 0 ? data.images_url.filter((url: string) => url.trim() !== "") : undefined,
         timestamp: new Date(),
       }
 
@@ -281,6 +286,31 @@ export function AnimatedAIChat() {
                     )}
                   >
                     <p className="whitespace-pre-wrap">{message.content}</p>
+                    {message.images && message.images.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {message.images.map((imageUrl, index) => (
+                          <motion.div
+                            key={index}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="relative group"
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`Imagem ${index + 1}`}
+                              className="max-w-sm h-auto rounded-lg shadow-lg hover:shadow-xl transition-shadow duration-300 cursor-pointer"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                              onClick={() => window.open(imageUrl, '_blank')}
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 rounded-lg transition-colors duration-300" />
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </motion.div>
               ))}
